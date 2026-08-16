@@ -1,0 +1,32 @@
+name: Deploy Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # This workflow deploys each subdirectory as a separate Cloudflare Worker
+  # To add a new page: create a subdirectory with a wrangler.toml and worker.js
+  # To remove a page: delete the subdirectory and the Worker will be cleaned up manually
+  # Each subdirectory must have its own wrangler.toml with a unique Worker name
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Wrangler
+        run: npm install -g wrangler@latest
+      - name: Deploy all pages
+        run: |
+          for dir in */; do
+            if [ -f "$dir/wrangler.toml" ]; then
+              echo "Deploying $dir..."
+              (cd "$dir" && wrangler deploy) || echo "Failed to deploy $dir"
+            fi
+          done
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
